@@ -14,15 +14,33 @@ function start(logger, mongo, callback) {
 	});
 
 	app.get('/', function(req, res, next) {
-		mongo.collection('posts').find({}, { title: 1, uri: 1, publishDate: 1 }).sort({ publishDate: -1 }).toArray(function(err, items) {
+		mongo.collection('posts').find({}, { title: 1, uri: 1, publishDate: 1, users_id: 1 }).sort({ publishDate: -1 }).toArray(function(err, items) {
 			if (err) {
 				var error = new Error("Could not retrieve posts");
 				error.statusCode = 500;
 				return next(error);
 			}
-			res.render('index.html', { posts: items.map(function(i) { return { title: i.title, uri: i.uri, date: i.publishDate }; }) });
-		});
+			resolveAuthors(mongo, items, function(records){
+				res.render('index.html', { posts: records.map(function(i){ return { title: i.title,	uri: i.uri, date: i.publishDate, author: i.author }; }) });
+			});
 	});
+	});
+
+	function resolveAuthors(db, records, callback){
+		var counter = 0;
+		for(var i = 0; i < records.length; i++)
+		{
+			(function(j){
+				db.collection('users').findOne({ _id: records[j].users_id }, { name: 1 }, function(err, author){
+					records[j].author = author ? author.name : '#unknown';
+					counter++;
+					if(counter === records.length){
+						callback(records);
+					}
+				});
+			})(i);
+		}
+	}
 
 	app.get('/posts/:uri', function(req, res, next) {
 		mongo.collection('posts').findOne({ uri: req.params.uri }, { title: 1, content: 1 }, function(err, item) {

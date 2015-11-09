@@ -7,8 +7,8 @@ var fakeMongo = { collection: function(){
 		toArray: function(callback){
 			return callback(null, fakePosts);
 		},
-		findOne: function(query, projection, callback){
-			return callback(null, fakePosts[0]);
+		findOne: function(){
+			return arguments[arguments.length - 1](null, fakePosts[0]);
 		},
 		find: function() { return this; },
 		sort: function() { return this; }
